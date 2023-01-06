@@ -1,5 +1,9 @@
 node_modules
 .env
+images/
+metadata/
+reserves/
+names.txt
 coverage
 coverage.json
 typechain
