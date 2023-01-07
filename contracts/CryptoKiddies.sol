@@ -4,6 +4,8 @@ pragma solidity ^0.8.17;
 
 import "hardhat/console.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
 
 //promt: An illustration that is aesthetically pleasing with a glitchpop background showing an 
 //animated character that has the following characteristics: aura - fire, persona - empathy, trait - intelligence
@@ -16,7 +18,9 @@ interface CryptLike {
 
 error CustomError(string message);
 
-contract CryptoKiddies {
+contract CryptoKiddies is ERC721URIStorage {
+    using Counters for Counters.Counter;
+    Counters.Counter private _tokenIds;
     mapping (address => uint) public bank;
     address public owner;
     mapping (address => bool) public players;
@@ -26,7 +30,7 @@ contract CryptoKiddies {
     uint256 eggCount = 0;
     CryptLike public crypt;
 
-    constructor(address crypt_) {
+    constructor(address crypt_) ERC721("Crypts", "CRT-NFT") {
         crypt = CryptLike(crypt_);
     }
 
@@ -100,7 +104,7 @@ contract CryptoKiddies {
         bank[msg.sender] -= (150 * (10**18));
         bank[address(this)] += (150 * (10**18));
         eggCount = eggCount+1;
-        bytes memory newEgg = new bytes(5);
+        bytes memory newEgg = new bytes(3);
         eggs[eggCount] = newEgg;
         eggOriginTime[eggCount] = block.timestamp;
         owned[msg.sender].push(eggCount);
@@ -155,20 +159,20 @@ contract CryptoKiddies {
         }
 
         bytes memory eggBytes = eggs[egg];
-        if (eggBytes[2] == '1' || eggBytes[2] =='2' || eggBytes[2] =='3' || eggBytes[2] =='4') {
+        if (eggBytes[1] == '1' || eggBytes[1] =='2' || eggBytes[1] =='3' || eggBytes[1] =='4') {
             revert CustomError("Persona already set");
         }
 
         bank[msg.sender] -= 75*(10**18);
         bank[address(this)] += 75*(10**18);
         if ( keccak256(abi.encodePacked(persona)) == keccak256(abi.encodePacked("Honesty")) ) {
-            eggBytes[2] = '1';
+            eggBytes[1] = '1';
         } else if ( keccak256(abi.encodePacked(persona)) == keccak256(abi.encodePacked("Cunning")) ) {
-            eggBytes[2] = '2';
+            eggBytes[1] = '2';
         } else if ( keccak256(abi.encodePacked(persona)) == keccak256(abi.encodePacked("Hardworking")) ) {
-            eggBytes[2] = '3';
+            eggBytes[1] = '3';
         } else if ( keccak256(abi.encodePacked(persona)) == keccak256(abi.encodePacked("Inspiring")) ) {
-            eggBytes[2] = '4';
+            eggBytes[1] = '4';
         }
 
         eggs[egg] = eggBytes;
@@ -185,22 +189,44 @@ contract CryptoKiddies {
         }
 
         bytes memory eggBytes = eggs[egg];
-        if (eggBytes[1] == '1' || eggBytes[1] =='2' || eggBytes[1] =='3' || eggBytes[1] =='4') {
+        if (eggBytes[2] == '1' || eggBytes[2] =='2' || eggBytes[2] =='3') {
             revert CustomError("Trait already set");
         }
 
         bank[msg.sender] -= 75*(10**18);
         bank[address(this)] += 75*(10**18);
         if ( keccak256(abi.encodePacked(trait)) == keccak256(abi.encodePacked("Bravery")) ) {
-            eggBytes[1] = '1';
+            eggBytes[2] = '1';
         } else if ( keccak256(abi.encodePacked(trait)) == keccak256(abi.encodePacked("Ambition")) ) {
-            eggBytes[1] = '2';
+            eggBytes[2] = '2';
         } else if ( keccak256(abi.encodePacked(trait)) == keccak256(abi.encodePacked("Empathy")) ) {
-            eggBytes[1] = '3';
-        } else if ( keccak256(abi.encodePacked(trait)) == keccak256(abi.encodePacked("Intelligence")) ) {
-            eggBytes[1] = '4';
+            eggBytes[2] = '3';
         }
 
         eggs[egg] = eggBytes;
+    }
+
+    function mint(uint egg) public {
+
+        require(eggOriginTime[egg] != 0, "Egg does not exist");
+        require(block.timestamp >= eggOriginTime[egg] + 4 weeks, "Need to wait 4 weeks to mint");
+        
+        bool index = binarySearch(owned[msg.sender], egg);
+        if (index) {
+            revert CustomError("Egg not found");
+        }
+
+        string memory link = "https://ipfs.io/ipfs/Qmc2mtehJCkXMwBoAtYV4CX4uZ3LeKvJ7enpePRkXatJ92/";
+        bytes memory eggBytes = eggs[egg];
+        if (eggBytes[0] == '' || eggBytes[1] =='' || eggBytes[2] =='') {
+            revert CustomError("A property has not been set properly");
+        }
+
+        string memory metadata = string(eggBytes);
+        string memory tokenURI = string(abi.encodePacked(link, metadata, ".json"));
+        _tokenIds.increment();
+        uint256 newItemID = _tokenIds.current();
+        _mint(msg.sender, newItemID);
+        _setTokenURI(newItemID, tokenURI);
     }
 }
