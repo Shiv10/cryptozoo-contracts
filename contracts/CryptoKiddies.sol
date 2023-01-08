@@ -2,21 +2,14 @@
 
 pragma solidity ^0.8.17;
 
-import "hardhat/console.sol";
-import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
-
-//promt: An illustration that is aesthetically pleasing with a glitchpop background showing an 
-//animated character that has the following characteristics: aura - fire, persona - empathy, trait - intelligence
 
 interface CryptLike {
     function transfer(address, uint) external returns (bool);
     function transferFrom(address, address, uint) external returns (bool);
     function balanceOf(address) external view returns (uint balance);
 }
-
-error CustomError(string message);
 
 contract CryptoKiddies is ERC721URIStorage {
     using Counters for Counters.Counter;
@@ -31,16 +24,11 @@ contract CryptoKiddies is ERC721URIStorage {
     CryptLike public crypt;
 
     constructor(address crypt_) ERC721("Crypts", "CRT-NFT") {
+        owner = msg.sender;
         crypt = CryptLike(crypt_);
     }
 
-    modifier onlyOwner() {
-        require(msg.sender == owner, "Need owner access to call function");
-        _;
-    }
-
-
-    function binarySearch(uint256[] storage array, uint256 element) internal view returns (bool) {
+    function binarySearch(uint256[] memory array, uint256 element) internal pure returns (bool) {
         if (array.length == 0) {
             return false;
         }
@@ -49,7 +37,7 @@ contract CryptoKiddies is ERC721URIStorage {
         uint256 high = array.length;
 
         while (low < high) {
-            uint256 mid = Math.average(low, high);
+            uint256 mid = (low & high) + (low ^ high) / 2;
 
             if (array[mid] > element) {
                 high = mid-1;
@@ -63,11 +51,8 @@ contract CryptoKiddies is ERC721URIStorage {
         return false;
     }
 
-    function gameBalance() public view returns (uint) {
-        return bank[address(this)]/(10**18);
-    }
-
-    function setGameBalance() public onlyOwner {
+    function setGameBalance() public {
+        require(msg.sender==owner, "NO");
         bank[address(this)] = crypt.balanceOf(address(this));
     }
 
@@ -76,19 +61,14 @@ contract CryptoKiddies is ERC721URIStorage {
             players[msg.sender] = true; 
         }
         if (players[msg.sender]) return;
-        require( bank[address(this)] > 1000*(10**18), "Not enough funds in treasury.");
+        require( bank[address(this)] > 1000*(10**18), "Empty Treasury");
         bank[address(this)] -= 1000 * (10**18);
         bank[msg.sender] +=  1000 * (10 ** 18);
         players[msg.sender] = true;
     }
 
-    function getPlayerBalance() public view returns (uint) {
-        uint playerBalance = bank[msg.sender] / (10**18);
-        return playerBalance;
-    }
-
     function deposit(uint amount) public {
-        require(crypt.balanceOf(msg.sender) >= amount * (10**18), "Not enough crypt tokens in wallet");
+        require(crypt.balanceOf(msg.sender) >= amount * (10**18), "No tokens");
         crypt.transferFrom(msg.sender, address(this), amount * (10**18));
         bank[msg.sender] += amount * (10**18);
     }
@@ -99,8 +79,8 @@ contract CryptoKiddies is ERC721URIStorage {
     }
 
     function purchase() public {
-        require(players[msg.sender] == true, "Need to signup before start playing");
-        require( bank[msg.sender] > (150 * (10**18)), "Not enough CRP coins in bank" );
+        require(players[msg.sender] == true, "Signup");
+        require( bank[msg.sender] > (150 * (10**18)), "Funds" );
         bank[msg.sender] -= (150 * (10**18));
         bank[address(this)] += (150 * (10**18));
         eggCount = eggCount+1;
@@ -120,19 +100,13 @@ contract CryptoKiddies is ERC721URIStorage {
     }
 
     function setEggElement(string memory element, uint egg) public {
-        require( bank[msg.sender] >= 50*(10**18), "Need at least 50 tokens in bank to add element to egg");
-        require(eggOriginTime[egg] != 0, "Egg does not exist");
-        require(block.timestamp >= eggOriginTime[egg] + 1 weeks, "Need to wait a week to set element");
-        
+        require( bank[msg.sender] >= 50*(10**18), "Need 50 tokens");
         bool index = binarySearch(owned[msg.sender], egg);
-        if (index) {
-            revert CustomError("Egg not found");
-        }
+        require(index, "Egg 404");
+        require(block.timestamp >= eggOriginTime[egg] + 1 weeks, "One week");
 
         bytes memory eggBytes = eggs[egg];
-        if (eggBytes[0] == '1' || eggBytes[0] =='2' || eggBytes[0] =='3' || eggBytes[0] =='4') {
-            revert CustomError("Element already set");
-        }
+        require(eggBytes[0] == '', "SET");
 
         bank[msg.sender] -= 50*(10**18);
         bank[address(this)] += 50*(10**18);
@@ -149,19 +123,15 @@ contract CryptoKiddies is ERC721URIStorage {
     }
 
     function setEggPersonality(string memory persona, uint egg) public {
-        require( bank[msg.sender] >= 75*(10**18), "Need at least 50 tokens in bank to add element to egg");
-        require(eggOriginTime[egg] != 0, "Egg does not exist");
-        require(block.timestamp >= eggOriginTime[egg] + 3 days, "Need to wait 3 days to set persona");
-        
+        require( bank[msg.sender] >= 75*(10**18), "Need 75 tokens");
         bool index = binarySearch(owned[msg.sender], egg);
-        if (index) {
-            revert CustomError("Egg not found");
-        }
+        require(index, "Egg not found");
+        require(block.timestamp >= eggOriginTime[egg] + 8 days, "8 days");
+
 
         bytes memory eggBytes = eggs[egg];
-        if (eggBytes[1] == '1' || eggBytes[1] =='2' || eggBytes[1] =='3' || eggBytes[1] =='4') {
-            revert CustomError("Persona already set");
-        }
+        require(eggBytes[1] == '', "SET");
+
 
         bank[msg.sender] -= 75*(10**18);
         bank[address(this)] += 75*(10**18);
@@ -179,19 +149,15 @@ contract CryptoKiddies is ERC721URIStorage {
     }
 
     function setEggTrait(string memory trait, uint egg) public {
-        require( bank[msg.sender] >= 75*(10**18), "Need at least 50 tokens in bank to add element to egg");
-        require(eggOriginTime[egg] != 0, "Egg does not exist");
-        require(block.timestamp >= eggOriginTime[egg] + 2 weeks, "Need to wait 2 weeks to set trait");
-        
+        require( bank[msg.sender] >= 75*(10**18), "Need 75 tokens");
         bool index = binarySearch(owned[msg.sender], egg);
-        if (index) {
-            revert CustomError("Egg not found");
-        }
+        require(index, "Egg 404");
+        require(block.timestamp >= eggOriginTime[egg] + 2 weeks, "2 weeks");
+
 
         bytes memory eggBytes = eggs[egg];
-        if (eggBytes[2] == '1' || eggBytes[2] =='2' || eggBytes[2] =='3') {
-            revert CustomError("Trait already set");
-        }
+        require(eggBytes[2] == '', "SET");
+        
 
         bank[msg.sender] -= 75*(10**18);
         bank[address(this)] += 75*(10**18);
@@ -209,21 +175,15 @@ contract CryptoKiddies is ERC721URIStorage {
     function mint(uint egg) public {
 
         require(eggOriginTime[egg] != 0, "Egg does not exist");
-        require(block.timestamp >= eggOriginTime[egg] + 4 weeks, "Need to wait 4 weeks to mint");
-        
         bool index = binarySearch(owned[msg.sender], egg);
-        if (index) {
-            revert CustomError("Egg not found");
-        }
+        require(index, "Egg not found");
+        require(block.timestamp >= eggOriginTime[egg] + 4 weeks, "Need to wait 4 weeks to mint");
 
         string memory link = "https://ipfs.io/ipfs/Qmc2mtehJCkXMwBoAtYV4CX4uZ3LeKvJ7enpePRkXatJ92/";
         bytes memory eggBytes = eggs[egg];
-        if (eggBytes[0] == '' || eggBytes[1] =='' || eggBytes[2] =='') {
-            revert CustomError("A property has not been set properly");
-        }
+        require(eggBytes[0] != '' && eggBytes[1] != '' && eggBytes[2] != '', "NOTSET");
 
-        string memory metadata = string(eggBytes);
-        string memory tokenURI = string(abi.encodePacked(link, metadata, ".json"));
+        string memory tokenURI = string(abi.encodePacked(link, string(eggBytes), ".json"));
         _tokenIds.increment();
         uint256 newItemID = _tokenIds.current();
         _mint(msg.sender, newItemID);
