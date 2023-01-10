@@ -2,18 +2,13 @@
 
 pragma solidity ^0.8.17;
 
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
-
 interface CryptLike {
     function transfer(address, uint) external returns (bool);
     function transferFrom(address, address, uint) external returns (bool);
     function balanceOf(address) external view returns (uint balance);
 }
 
-contract CryptoKiddies is ERC721URIStorage {
-    using Counters for Counters.Counter;
-    Counters.Counter private _tokenIds;
+contract CryptoKiddies {
     mapping (address => uint) public bank;
     address public owner;
     mapping (address => bool) public players;
@@ -23,7 +18,7 @@ contract CryptoKiddies is ERC721URIStorage {
     uint256 eggCount = 0;
     CryptLike public crypt;
 
-    constructor(address crypt_) ERC721("Crypts", "CRT-NFT") {
+    constructor(address crypt_) {
         owner = msg.sender;
         crypt = CryptLike(crypt_);
     }
@@ -36,7 +31,7 @@ contract CryptoKiddies is ERC721URIStorage {
         uint256 low = 0;
         uint256 high = array.length;
 
-        while (low < high) {
+        while (low <= high) {
             uint256 mid = (low & high) + (low ^ high) / 2;
 
             if (array[mid] > element) {
@@ -90,11 +85,11 @@ contract CryptoKiddies is ERC721URIStorage {
         owned[msg.sender].push(eggCount);
     }
 
-    function getOwnedEggs() public view returns (uint[] memory) {
-        uint length = owned[msg.sender].length;
+    function getOwnedEggs(address _address) external view returns (uint[] memory) {
+        uint length = owned[_address].length;
         uint[] memory data = new uint[](length);
         for (uint i = 0; i<length; i++) {
-            data[i] = owned[msg.sender][i];
+            data[i] = owned[_address][i];
         }
         return data;
     }
@@ -103,7 +98,7 @@ contract CryptoKiddies is ERC721URIStorage {
         require( bank[msg.sender] >= 50*(10**18), "Need 50 tokens");
         bool index = binarySearch(owned[msg.sender], egg);
         require(index, "Egg 404");
-        require(block.timestamp >= eggOriginTime[egg] + 1 weeks, "One week");
+        require(block.timestamp >= eggOriginTime[egg] + 2 days, "2 days");
 
         bytes memory eggBytes = eggs[egg];
         require(eggBytes[0] == '', "SET");
@@ -126,7 +121,7 @@ contract CryptoKiddies is ERC721URIStorage {
         require( bank[msg.sender] >= 75*(10**18), "Need 75 tokens");
         bool index = binarySearch(owned[msg.sender], egg);
         require(index, "Egg not found");
-        require(block.timestamp >= eggOriginTime[egg] + 8 days, "8 days");
+        require(block.timestamp >= eggOriginTime[egg] + 4 days, "4 days");
 
 
         bytes memory eggBytes = eggs[egg];
@@ -152,7 +147,7 @@ contract CryptoKiddies is ERC721URIStorage {
         require( bank[msg.sender] >= 75*(10**18), "Need 75 tokens");
         bool index = binarySearch(owned[msg.sender], egg);
         require(index, "Egg 404");
-        require(block.timestamp >= eggOriginTime[egg] + 2 weeks, "2 weeks");
+        require(block.timestamp >= eggOriginTime[egg] + 6 days, "6 days");
 
 
         bytes memory eggBytes = eggs[egg];
@@ -170,23 +165,5 @@ contract CryptoKiddies is ERC721URIStorage {
         }
 
         eggs[egg] = eggBytes;
-    }
-
-    function mint(uint egg) public {
-
-        require(eggOriginTime[egg] != 0, "Egg does not exist");
-        bool index = binarySearch(owned[msg.sender], egg);
-        require(index, "Egg not found");
-        require(block.timestamp >= eggOriginTime[egg] + 4 weeks, "Need to wait 4 weeks to mint");
-
-        string memory link = "https://ipfs.io/ipfs/Qmc2mtehJCkXMwBoAtYV4CX4uZ3LeKvJ7enpePRkXatJ92/";
-        bytes memory eggBytes = eggs[egg];
-        require(eggBytes[0] != '' && eggBytes[1] != '' && eggBytes[2] != '', "NOTSET");
-
-        string memory tokenURI = string(abi.encodePacked(link, string(eggBytes), ".json"));
-        _tokenIds.increment();
-        uint256 newItemID = _tokenIds.current();
-        _mint(msg.sender, newItemID);
-        _setTokenURI(newItemID, tokenURI);
     }
 }

@@ -1,6 +1,6 @@
 import json
 
-elements = ['Fire','Water', 'Earth', 'Air']
+elements = ['Fire','water', 'earth', 'Air']
 personas = ['Honesty', 'Cunning', 'Hardworking', 'Inspiring']
 traits = ['Bravery', 'Ambition', 'Empathy']
 
@@ -11,7 +11,7 @@ for i in range(0, len(elements)):
             obj = {
                 "name": names.readline().strip(),
                 "description": "NFT by cryptkiddies",
-                "image": "https://ipfs.io/ipfs/QmfU8w3TwY8Q6b9g8jebvxfnUYX2YFnvtKgNN3snQw5EVV/"+elements[i]+"/"+str(i+1)+str(j+1)+str(k+1)+".png",
+                "image": "https://ipfs.io/ipfs/",
                 "attributes": [
                     {
                         "trait_type": "Aura",
